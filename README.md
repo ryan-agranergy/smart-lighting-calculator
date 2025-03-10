@@ -31,21 +31,48 @@ pip install -r requirements.txt
 1. 运行应用：
 
 ```bash
-python app.py
+streamlit run app.py 
 ```
 
 1. 在浏览器中访问：
 
 ```text
-http://localhost:5000
+http://localhost:8501/
 ```
 
 ## 技术栈
 
 - Python
-- Flask
+- Streamlit
 - SQLite
-- HTML/CSS/JavaScript
+
+## 自动部署
+
+本项目使用 GitHub Actions 自动部署到服务器。要启用自动部署，需要在 GitHub 仓库设置以下 Secrets：
+
+- `SERVER_HOST`: 服务器的公共 IP 或域名
+- `SERVER_USERNAME`: 服务器的用户名（通常是 'ubuntu'）
+- `SERVER_SSH_KEY`: 服务器的 SSH 私钥
+
+### 服务器配置
+
+部署脚本会自动完成以下操作：
+
+1. 将应用部署到 `/opt/calculator` 目录
+2. 保留最近 5 个备份版本
+3. 自动重启服务
+
+你可以通过以下命令检查服务状态：
+
+```bash
+sudo systemctl status smart-lighting
+```
+
+如果需要查看应用日志：
+
+```bash
+sudo journalctl -u smart-lighting -f
+```
 
 ## 贡献指南
 

@@ -3,6 +3,11 @@ import openai
 from datetime import datetime, time
 import os
 from dotenv import load_dotenv
+
+# 配置 Streamlit
+st.set_option('server.enableCORS', True)
+st.set_option('server.enableXsrfProtection', False)
+st.set_option('server.enableWebsocketCompression', False)
 import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape
@@ -110,7 +115,15 @@ class SmartLightingCalculator:
         }
 
 def main():
-    st.set_page_config(page_title='Smart Lighting Energy Calculator', layout='wide')
+    st.set_page_config(
+        page_title='Smart Lighting Energy Calculator',
+        layout='wide',
+        menu_items={
+            'Get help': None,
+            'Report a bug': None,
+            'About': None
+        }
+    )
     st.title('Smart Lighting Energy Calculator')
     
     calculator = SmartLightingCalculator()
@@ -131,7 +144,7 @@ def main():
         if st.button('Next') and project_name:
             st.session_state.calculator.data['project_name'] = project_name
             st.session_state.step += 1
-            st.experimental_rerun()
+            st.rerun()
 
     elif st.session_state.step == 1:
         st.write('Please tell me about your existing lighting system.')
@@ -141,7 +154,7 @@ def main():
             if valid:
                 st.session_state.calculator.data['total_lights'] = total_lights
                 st.session_state.step += 1
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error(message)
 
@@ -153,7 +166,7 @@ def main():
             if valid:
                 st.session_state.calculator.data['original_wattage'] = original_wattage
                 st.session_state.step += 1
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error(message)
 
@@ -165,13 +178,13 @@ def main():
             if valid:
                 st.session_state.calculator.data['electricity_rate'] = electricity_rate
                 st.session_state.step += 1
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error(message)
 
     elif st.session_state.step == 4:
         st.session_state.step += 1
-        st.experimental_rerun()
+        st.rerun()
 
     elif st.session_state.step == 5:
         st.write('Set up the lighting schedule.')
@@ -257,7 +270,7 @@ def main():
             else:
                 st.session_state.calculator.data['operation_schedule'] = schedule
                 st.session_state.step += 1
-                st.experimental_rerun()
+                st.rerun()
 
     elif st.session_state.step == 6:
         st.write('Configure Smart Lighting Power Settings')
@@ -292,7 +305,7 @@ def main():
             st.session_state.calculator.data['smart_light_low_wattage'] = low_power
             st.session_state.calculator.data['high_power_ratio'] = high_power_ratio
             st.session_state.step += 1
-            st.experimental_rerun()
+            st.rerun()
 
     elif st.session_state.step == 7:
         # Display calculation results
@@ -487,7 +500,7 @@ def main():
             # Add reset button
             if st.button('Calculate Again'):
                 st.session_state.step = 0
-                st.experimental_rerun()
+                st.rerun()
         else:
             st.error('Error in calculations. Please check your input data.')
 
