@@ -1,13 +1,7 @@
 import streamlit as st
-import openai
 from datetime import datetime, time
 import os
 from dotenv import load_dotenv
-
-# 配置 Streamlit
-st.set_option('server.enableCORS', True)
-st.set_option('server.enableXsrfProtection', False)
-st.set_option('server.enableWebsocketCompression', False)
 import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape
@@ -18,7 +12,6 @@ import io
 
 # Load environment variables
 load_dotenv()
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 class SmartLightingCalculator:
     def __init__(self):
