@@ -381,65 +381,123 @@ def main():
         # Display calculation results
         savings = st.session_state.calculator.calculate_savings()
         if savings:
-            st.success('Calculation complete! Here are the energy saving results:')
-            
+            # Project Parameters Section
+            st.subheader('Project Parameters')
             col1, col2 = st.columns(2)
-            # Round all savings values to 2 decimal places
-            savings = {k: round(v, 2) if isinstance(v, (int, float)) and k != 'period_details' else v 
-                      for k, v in savings.items()}
-            
             with col1:
-                st.metric('Annual Energy Savings', f"{savings['annual_savings_kwh']:,.0f} kWh")
-                st.metric('Annual Cost Savings', f"SGD {savings['annual_savings_sgd']:,.0f}")
-                st.metric('Annual Savings per Light', f"SGD {savings['per_light_annual_savings']:,.0f}")
+                st.write(f"Total Lights: {st.session_state.calculator.data['total_lights']}")
+                st.write(f"Original Wattage: {st.session_state.calculator.data['original_wattage']} W")
             with col2:
-                st.metric('6-Year Total Savings', f"SGD {savings['six_year_savings']:,.0f}")
-                st.metric('Daily Energy Savings', f"{savings['daily_savings_kwh']:,.1f} kWh")
+                st.write(f"Electricity Rate: {st.session_state.calculator.data['electricity_rate']} SGD/kWh")
+                st.write(f"Smart Light High Power: {st.session_state.calculator.data['smart_light_high_wattage']} W")
+            st.divider()
 
-            # Display detailed calculations table
-            st.subheader('Detailed Calculations')
-            
-            # Create a DataFrame for the period details and round numeric columns
-            df = pd.DataFrame(savings['period_details'])
-            df.columns = ['Period', 'Lights ON', 'Original Consumption (kWh)', 
-                         'High Power Hours', 'Low Power Hours',
-                         'High Power Consumption (kWh)', 'Low Power Consumption (kWh)',
-                         'Smart Total Consumption (kWh)', 'Period Savings (kWh)']
-            
-            # Format numeric columns with comma separators
-            numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns
-            for col in numeric_columns:
-                if col == 'Lights ON':
-                    df[col] = df[col].apply(lambda x: f'{int(x):,}')
-                else:
-                    df[col] = df[col].apply(lambda x: f'{x:,.2f}')
-            
-            # Display the detailed table with index starting from 1
-            df.index = range(1, len(df) + 1)
-            st.dataframe(df, use_container_width=True)
+            # Key Metrics Section
+            st.subheader('Key Energy Savings Metrics')
+            metrics_cols = st.columns(4)
+            with metrics_cols[0]:
+                st.metric('Annual Energy Savings', f"{savings['annual_savings_kwh']:,.0f} kWh")
+            with metrics_cols[1]:
+                st.metric('Annual Cost Savings', f"SGD {savings['annual_savings_sgd']:,.0f}")
+            with metrics_cols[2]:
+                st.metric('6-Year Energy Savings', f"{savings['annual_savings_kwh']*6:,.0f} kWh")
+            with metrics_cols[3]:
+                st.metric('6-Year Cost Savings', f"SGD {savings['six_year_savings']:,.0f}")
+            st.divider()
 
-            # Summary table
-            st.subheader('Daily Summary')
-            summary_data = {
-                'System': ['Original System', 'Smart Lighting System'],
-                'Daily Consumption (kWh)': [savings['original_daily_consumption'], 
-                                          savings['smart_daily_consumption']],
-                'Annual Consumption (kWh)': [savings['original_daily_consumption'] * 365, 
-                                           savings['smart_daily_consumption'] * 365],
-                'Annual Cost (SGD)': [
-                    savings['original_daily_consumption'] * 365 * st.session_state.calculator.data['electricity_rate'],
-                    savings['smart_daily_consumption'] * 365 * st.session_state.calculator.data['electricity_rate']
-                ]
-            }
-            summary_df = pd.DataFrame(summary_data)
+            # Proposals Section
+            st.subheader('Investment Proposals')
+            proposal_tabs = st.tabs(['Direct Purchase', 'EMC Contract'])
+
+            # Direct Purchase Tab
+            with proposal_tabs[0]:
+                st.write('Parameters for Direct Purchase ROI:')
+                dp_col1, dp_col2 = st.columns(2)
+                with dp_col1:
+                    light_price = st.number_input('Agranergy Light Tube Price (SGD)', value=85.0, step=1.0, key='dp_light_price')
+                with dp_col2:
+                    installation_cost = st.number_input('Installation Cost per Light (SGD)', value=5.0, step=1.0, key='dp_installation_cost')
+                
+                initial_investment = light_price * st.session_state.calculator.data['total_lights']
+                total_installation = installation_cost * st.session_state.calculator.data['total_lights']
+                roi = savings['six_year_savings'] - initial_investment - total_installation
+                payback_period = (initial_investment + total_installation) / savings['annual_savings_sgd']
+
+                st.write('Direct Purchase Analysis:')
+                dp_metrics = st.columns(4)
+                with dp_metrics[0]:
+                    st.metric('Initial Investment', f"SGD {initial_investment:,.0f}")
+                with dp_metrics[1]:
+                    st.metric('Installation Cost', f"SGD {total_installation:,.0f}")
+                with dp_metrics[2]:
+                    st.metric('6-Year ROI', f"SGD {roi:,.0f}")
+                with dp_metrics[3]:
+                    st.metric('Payback Period', f"{payback_period:.1f} years")
+
+            # EMC Contract Tab
+            with proposal_tabs[1]:
+                st.write('EMC Contract Parameters:')
+                emc_col1, emc_col2, emc_col3 = st.columns(3)
+                with emc_col1:
+                    cost_share = st.number_input('Client Cost Saving Share (%)', value=60, min_value=0, max_value=100, key='emc_cost_share')
+                with emc_col2:
+                    placement_fee = st.number_input('Placement Fee per Light (SGD)', value=25.0, step=1.0, key='emc_placement_fee')
+                with emc_col3:
+                    emc_installation = st.number_input('Installation Cost per Light (SGD)', value=5.0, step=1.0, key='emc_installation_cost')
+
+                total_placement = placement_fee * st.session_state.calculator.data['total_lights']
+                total_emc_installation = emc_installation * st.session_state.calculator.data['total_lights']
+                cost_saving_share = (cost_share / 100) * savings['six_year_savings']
+                total_benefit = cost_saving_share - total_placement - total_emc_installation
+
+                st.write('EMC Contract Analysis (6 years):')
+                emc_metrics = st.columns(4)
+                with emc_metrics[0]:
+                    st.metric('Cost Saving Share', f"SGD {cost_saving_share:,.0f}")
+                with emc_metrics[1]:
+                    st.metric('Placement Fee', f"SGD {total_placement:,.0f}")
+                with emc_metrics[2]:
+                    st.metric('Installation Cost', f"SGD {total_emc_installation:,.0f}")
+                with emc_metrics[3]:
+                    st.metric('Total Benefit', f"SGD {total_benefit:,.0f}")
             
-            # Format numeric columns with comma separators
-            numeric_columns = ['Daily Consumption (kWh)', 'Annual Consumption (kWh)', 'Annual Cost (SGD)']
-            for col in numeric_columns:
-                summary_df[col] = summary_df[col].apply(lambda x: f'{x:,.2f}')
-            
-            summary_df.index = range(1, len(summary_df) + 1)
-            st.dataframe(summary_df, use_container_width=True)
+            st.divider()
+            # Detailed Calculations Section
+            with st.expander('View Detailed Calculations'):
+                # System Comparison
+                st.subheader('System Consumption Comparison')
+                comp_cols = st.columns(2)
+                with comp_cols[0]:
+                    st.write('Original System:')
+                    st.metric('Daily Consumption', f"{savings['original_daily_consumption']:,.1f} kWh")
+                    st.metric('Annual Consumption', f"{savings['original_daily_consumption']*365:,.0f} kWh")
+                    st.metric('Annual Cost', f"SGD {savings['original_daily_consumption']*365*st.session_state.calculator.data['electricity_rate']:,.0f}")
+                with comp_cols[1]:
+                    st.write('Smart System:')
+                    st.metric('Daily Consumption', f"{savings['smart_daily_consumption']:,.1f} kWh")
+                    st.metric('Annual Consumption', f"{savings['smart_daily_consumption']*365:,.0f} kWh")
+                    st.metric('Annual Cost', f"SGD {savings['smart_daily_consumption']*365*st.session_state.calculator.data['electricity_rate']:,.0f}")
+                
+                st.divider()
+                st.subheader('Period Details')
+                # Create a DataFrame for the period details
+                df = pd.DataFrame(savings['period_details'])
+                df.columns = ['Period', 'Lights ON', 'Original Consumption (kWh)', 
+                             'High Power Hours', 'Low Power Hours',
+                             'High Power Consumption (kWh)', 'Low Power Consumption (kWh)',
+                             'Smart Total Consumption (kWh)', 'Period Savings (kWh)']
+                
+                # Format numeric columns with comma separators
+                numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns
+                for col in numeric_columns:
+                    if col == 'Lights ON':
+                        df[col] = df[col].apply(lambda x: f'{int(x):,}')
+                    else:
+                        df[col] = df[col].apply(lambda x: f'{x:,.2f}')
+                
+                # Display the detailed table with index starting from 1
+                df.index = range(1, len(df) + 1)
+                st.dataframe(df, use_container_width=True)
 
             # Add PDF export functionality
             if st.button('Export Results to PDF'):
@@ -460,7 +518,7 @@ def main():
                     parent=styles['Heading1'],
                     fontSize=24,
                     spaceAfter=30,
-                    alignment=1  # Center alignment
+                    alignment=1
                 )
                 subtitle_style = ParagraphStyle(
                     'Subtitle',
@@ -468,22 +526,29 @@ def main():
                     fontSize=16,
                     spaceAfter=20,
                     spaceBefore=20,
-                    alignment=1  # Center alignment
+                    alignment=1
+                )
+                normal_style = ParagraphStyle(
+                    'Normal',
+                    parent=styles['Normal'],
+                    fontSize=12,
+                    spaceBefore=10,
+                    spaceAfter=10
                 )
 
-                # Add title
+                # Add title and project name
                 elements.append(Paragraph(f"Agranergy Energy Savings Report - {st.session_state.calculator.data['project_name']}", title_style))
                 elements.append(Spacer(1, 20))
 
-                # Add project details
-                elements.append(Paragraph("Project Details", subtitle_style))
+                # Project Parameters
+                elements.append(Paragraph("Project Parameters", subtitle_style))
                 project_data = [
                     ["Parameter", "Value"],
-                    ["Total Lights", st.session_state.calculator.data['total_lights']],
+                    ["Total Lights", f"{st.session_state.calculator.data['total_lights']:,}"],
                     ["Original Wattage", f"{st.session_state.calculator.data['original_wattage']}W"],
                     ["Electricity Rate", f"SGD {st.session_state.calculator.data['electricity_rate']}/kWh"],
-                    ["Smart Light High Power", "10W"],
-                    ["Smart Light Low Power", "2W"]
+                    ["Smart Light High Power", f"{st.session_state.calculator.data['smart_light_high_wattage']}W"],
+                    ["Smart Light Low Power", f"{st.session_state.calculator.data['smart_light_low_wattage']}W"]
                 ]
                 t = Table(project_data, colWidths=[200, 200])
                 t.setStyle(TableStyle([
@@ -502,17 +567,81 @@ def main():
                 elements.append(t)
                 elements.append(Spacer(1, 20))
 
-                # Add savings summary
-                elements.append(Paragraph("Savings Summary", subtitle_style))
-                summary_data = [
+                # Key Energy Savings Metrics
+                elements.append(Paragraph("Key Energy Savings Metrics", subtitle_style))
+                metrics_data = [
                     ["Metric", "Value"],
-                    ["Annual Energy Savings", f"{savings['annual_savings_kwh']} kWh"],
-                    ["Annual Cost Savings", f"SGD {savings['annual_savings_sgd']}"],
-                    ["Annual Savings per Light", f"SGD {savings['per_light_annual_savings']}"],
-                    ["6-Year Total Savings", f"SGD {savings['six_year_savings']}"],
-                    ["Daily Energy Savings", f"{savings['daily_savings_kwh']} kWh"]
+                    ["Annual Energy Savings", f"{savings['annual_savings_kwh']:,.0f} kWh"],
+                    ["Annual Cost Savings", f"SGD {savings['annual_savings_sgd']:,.0f}"],
+                    ["6-Year Energy Savings", f"{savings['annual_savings_kwh']*6:,.0f} kWh"],
+                    ["6-Year Cost Savings", f"SGD {savings['six_year_savings']:,.0f}"]
                 ]
-                t = Table(summary_data, colWidths=[200, 200])
+                t = Table(metrics_data, colWidths=[200, 200])
+                t.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                elements.append(t)
+                elements.append(Spacer(1, 20))
+
+                # Direct Purchase Analysis
+                elements.append(Paragraph("Direct Purchase Analysis", subtitle_style))
+                dp_data = [
+                    ["Parameter", "Value"],
+                    ["Light Tube Price", f"SGD {light_price:,.2f}"],
+                    ["Installation Cost", f"SGD {installation_cost:,.2f}"],
+                    ["Initial Investment", f"SGD {initial_investment:,.0f}"],
+                    ["Total Installation Cost", f"SGD {total_installation:,.0f}"],
+                    ["6-Year ROI", f"SGD {roi:,.0f}"],
+                    ["Payback Period", f"{payback_period:.1f} years"]
+                ]
+                t = Table(dp_data, colWidths=[200, 200])
+                t.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                elements.append(t)
+                elements.append(Spacer(1, 20))
+
+                # EMC Contract Analysis
+                elements.append(Paragraph("EMC Contract Analysis (6 years)", subtitle_style))
+                emc_data = [
+                    ["Parameter", "Value"],
+                    ["Client Cost Saving Share", f"{cost_share}%"],
+                    ["Placement Fee per Light", f"SGD {placement_fee:,.2f}"],
+                    ["Installation Cost per Light", f"SGD {emc_installation:,.2f}"],
+                    ["Total Cost Saving Share", f"SGD {cost_saving_share:,.0f}"],
+                    ["Total Placement Fee", f"SGD {total_placement:,.0f}"],
+                    ["Total Installation Cost", f"SGD {total_emc_installation:,.0f}"],
+                    ["Total Benefit", f"SGD {total_benefit:,.0f}"]
+                ]
+                t = Table(emc_data, colWidths=[200, 200])
+                t.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                elements.append(t)
+                elements.append(Spacer(1, 20))
+
+                # System Comparison
+                elements.append(Paragraph("System Consumption Comparison", subtitle_style))
+                comparison_data = [
+                    ["Metric", "Original System", "Smart System"],
+                    ["Daily Consumption", f"{savings['original_daily_consumption']:,.1f} kWh", f"{savings['smart_daily_consumption']:,.1f} kWh"],
+                    ["Annual Consumption", f"{savings['original_daily_consumption']*365:,.0f} kWh", f"{savings['smart_daily_consumption']*365:,.0f} kWh"],
+                    ["Annual Cost", f"SGD {savings['original_daily_consumption']*365*st.session_state.calculator.data['electricity_rate']:,.0f}", 
+                     f"SGD {savings['smart_daily_consumption']*365*st.session_state.calculator.data['electricity_rate']:,.0f}"]
+                ]
+                t = Table(comparison_data, colWidths=[133, 133, 134])
                 t.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                     ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -529,51 +658,48 @@ def main():
                 elements.append(t)
                 elements.append(Spacer(1, 30))
 
-                # Add period details table with more spacing and adjusted layout
-                elements.append(Spacer(1, 40))  # Add more space before the table
+                # Add period details table
                 elements.append(Paragraph("Detailed Calculations by Period", subtitle_style))
-                elements.append(Spacer(1, 20))  # Add space between title and table
-                
-                # Rename and reorder columns for better readability
-                df.columns = [
+                elements.append(Spacer(1, 20))
+
+                # Create period details table
+                period_headers = [
                     'Period',
-                    'Lights ON',
+                    'Lights ON (%)',
                     'Original (kWh)',
-                    'High Hours',
-                    'Low Hours',
                     'High Power (kWh)',
                     'Low Power (kWh)',
                     'Smart Total (kWh)',
                     'Savings (kWh)'
                 ]
                 
-                # Round numeric values in the DataFrame
-                numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns
-                df[numeric_columns] = df[numeric_columns].round(2)
+                period_data = [period_headers]
+                for period in savings['period_details']:
+                    period_data.append([
+                        period['period'],
+                        period['lights_on'],
+                        f"{period['original_consumption']:,.2f}",
+                        f"{period['smart_high_consumption']:,.2f}",
+                        f"{period['smart_low_consumption']:,.2f}",
+                        f"{period['smart_total_consumption']:,.2f}",
+                        f"{period['period_savings']:,.2f}"
+                    ])
                 
-                period_data = [[col for col in df.columns]] + df.values.tolist()
-                # Adjust column widths for better fit
-                col_widths = [90, 70, 90, 70, 70, 90, 90, 90, 90]
+                # Calculate column widths for better fit
+                col_widths = [100, 80, 90, 90, 90, 90, 90]
                 t = Table(period_data, colWidths=col_widths)
                 t.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                     ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                     ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                     ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (-1, 0), 9),  # Slightly smaller font
-                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                    ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                    ('FONTSIZE', (0, 1), (-1, -1), 8),  # Slightly smaller font
-                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                    ('TOPPADDING', (0, 0), (-1, -1), 6),  # Add padding
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6)  # Add padding
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('FONTSIZE', (0, 1), (-1, -1), 9),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
                 ]))
                 elements.append(t)
-                elements.append(Spacer(1, 20))  # Add space after table
 
-                # Build PDF with page numbers
+                # Add page numbers to PDF
                 def add_page_number(canvas, doc):
                     canvas.saveState()
                     canvas.setFont('Helvetica', 9)
@@ -584,11 +710,15 @@ def main():
                     )
                     canvas.restoreState()
 
+                # Build PDF with page numbers
                 doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
-                pdf_bytes = pdf_buffer.getvalue()
+                pdf_data = pdf_buffer.getvalue()
+                pdf_buffer.close()
+
+                # Offer the PDF for download
                 st.download_button(
                     label='Download PDF Report',
-                    data=pdf_bytes,
+                    data=pdf_data,
                     file_name=f'energy_savings_report_{st.session_state.calculator.data["project_name"]}.pdf',
                     mime='application/pdf'
                 )
