@@ -14,6 +14,18 @@ import io
 load_dotenv()
 
 class SmartLightingCalculator:
+    def calculate_high_brightness(self, input_wattage):
+        """Calculate high brightness mode wattage based on input wattage"""
+        if input_wattage <= 20:
+            return 10
+        if input_wattage <= 24:
+            return 12
+        if input_wattage <= 36:
+            return 16
+        if input_wattage <= 60:
+            return 18
+        return 20  # Maximum cap at 20W
+
     def __init__(self):
         self.data = {
             'project_name': None,
@@ -142,8 +154,21 @@ def main():
 
     elif st.session_state.step == 1:
         st.write('Please tell me about your existing lighting system.')
-        total_lights = st.number_input('How many lights are there in total?', min_value=1, max_value=10000, value=500)
-        if st.button('Next') and total_lights:
+        
+        with st.form(key='lights_form'):
+            total_lights = st.number_input('How many lights are there in total?', min_value=1, max_value=10000, value=500)
+            
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                previous_button = st.form_submit_button('Previous')
+            with col2:
+                next_button = st.form_submit_button('Next')
+        
+        if previous_button:
+            st.session_state.step -= 1
+            st.rerun()
+            
+        if next_button:
             valid, message = calculator.validate_input('total_lights', total_lights)
             if valid:
                 st.session_state.calculator.data['total_lights'] = total_lights
@@ -154,20 +179,53 @@ def main():
 
     elif st.session_state.step == 2:
         st.write('Please provide the power information for existing lights.')
-        original_wattage = st.number_input('What is the power of existing lights (W)?', min_value=1, max_value=400, value=30)
-        if st.button('Next') and original_wattage:
-            valid, message = calculator.validate_input('original_wattage', original_wattage)
-            if valid:
-                st.session_state.calculator.data['original_wattage'] = original_wattage
-                st.session_state.step += 1
-                st.rerun()
+        
+        with st.form(key='wattage_form'):
+            original_wattage = st.number_input('What is the power of existing lights (W)?', min_value=1, max_value=400, value=30)
+            
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                previous_button = st.form_submit_button('Previous')
+            with col2:
+                next_button = st.form_submit_button('Next')
+        
+        if previous_button:
+            st.session_state.step -= 1
+            st.rerun()
+            
+        if next_button:
+            if original_wattage < 10 or original_wattage > 200:
+                st.error('This type of light is currently not supported in our calculator.')
             else:
-                st.error(message)
+                valid, message = calculator.validate_input('original_wattage', original_wattage)
+                if valid:
+                    st.session_state.calculator.data['original_wattage'] = original_wattage
+                    # Set high power mode wattage based on input
+                    high_wattage = st.session_state.calculator.calculate_high_brightness(original_wattage)
+                    st.session_state.calculator.data['smart_light_high_wattage'] = high_wattage
+                    st.session_state.calculator.data['smart_light_low_wattage'] = 2  # Fixed low power mode
+                    st.session_state.step += 1
+                    st.rerun()
+                else:
+                    st.error(message)
 
     elif st.session_state.step == 3:
         st.write('Please provide electricity rate information.')
-        electricity_rate = st.number_input('What is the electricity rate per kWh (SGD)?', min_value=0.1, max_value=1.0, step=0.1, value=0.5)
-        if st.button('Next') and electricity_rate:
+        
+        with st.form(key='rate_form'):
+            electricity_rate = st.number_input('What is the electricity rate per kWh (SGD)?', min_value=0.1, max_value=1.0, step=0.1, value=0.5)
+            
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                previous_button = st.form_submit_button('Previous')
+            with col2:
+                next_button = st.form_submit_button('Next')
+        
+        if previous_button:
+            st.session_state.step -= 1
+            st.rerun()
+            
+        if next_button:
             valid, message = calculator.validate_input('electricity_rate', electricity_rate)
             if valid:
                 st.session_state.calculator.data['electricity_rate'] = electricity_rate
@@ -273,11 +331,13 @@ def main():
         col1, col2 = st.columns(2)
         with col1:
             st.subheader('Power Levels')
+            original_wattage = st.session_state.calculator.data['original_wattage']
+            default_high_power = st.session_state.calculator.calculate_high_brightness(original_wattage)
             high_power = st.number_input('High Power Mode (W)', 
                                         min_value=5, 
                                         max_value=20, 
-                                        value=10,
-                                        help='Power consumption in high power mode (default: 10W)')
+                                        value=default_high_power,
+                                        help='Power consumption in high power mode')
             low_power = st.number_input('Low Power Mode (W)', 
                                        min_value=1, 
                                        max_value=5, 
