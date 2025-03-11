@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit.components.v1 import html
 from datetime import datetime, time
 import os
 from dotenv import load_dotenv
@@ -130,6 +131,9 @@ def main():
             'About': None
         }
     )
+    
+    # Add Plausible analytics script
+    html('<script defer data-domain="calculator.agranergy.com" src="https://plausible.io/js/script.js"></script>')
     st.title('Agranergy Energy Savings Calculator')
     
     calculator = SmartLightingCalculator()
