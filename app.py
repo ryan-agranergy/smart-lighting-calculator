@@ -4,6 +4,19 @@ from datetime import datetime, time
 import os
 from dotenv import load_dotenv
 import pandas as pd
+
+# Configure Streamlit page
+st.set_page_config(
+    page_title='Agranergy Energy Savings Calculator',
+    page_icon='https://www.agranergy.com/assets/logo-969d5430.ico',
+    layout='wide',
+    menu_items={
+        'Get help': None,
+        'Report a bug': None,
+        'About': None
+    },
+    initial_sidebar_state='collapsed'
+)
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -121,19 +134,13 @@ class SmartLightingCalculator:
         }
 
 def main():
-    st.set_page_config(
-        page_title='Agranergy Energy Savings Calculator',
-        page_icon='https://www.agranergy.com/assets/logo-969d5430.ico',
-        layout='wide',
-        menu_items={
-            'Get help': None,
-            'Report a bug': None,
-            'About': None
-        }
+    # Inject Plausible analytics script
+    st.components.v1.html(
+        """
+        <script defer data-domain="calculator.agranergy.com" src="https://plausible.io/js/script.js"></script>
+        """,
+        height=0
     )
-    
-    # Add Plausible analytics script
-    html('<script defer data-domain="calculator.agranergy.com" src="https://plausible.io/js/script.js"></script>')
     st.title('Agranergy Energy Savings Calculator')
     
     calculator = SmartLightingCalculator()
@@ -377,12 +384,12 @@ def main():
                       for k, v in savings.items()}
             
             with col1:
-                st.metric('Annual Energy Savings', f"{savings['annual_savings_kwh']} kWh")
-                st.metric('Annual Cost Savings', f"SGD {savings['annual_savings_sgd']}")
-                st.metric('Annual Savings per Light', f"SGD {savings['per_light_annual_savings']}")
+                st.metric('Annual Energy Savings', f"{savings['annual_savings_kwh']:,.0f} kWh")
+                st.metric('Annual Cost Savings', f"SGD {savings['annual_savings_sgd']:,.0f}")
+                st.metric('Annual Savings per Light', f"SGD {savings['per_light_annual_savings']:,.0f}")
             with col2:
-                st.metric('6-Year Total Savings', f"SGD {savings['six_year_savings']}")
-                st.metric('Daily Energy Savings', f"{savings['daily_savings_kwh']} kWh")
+                st.metric('6-Year Total Savings', f"SGD {savings['six_year_savings']:,.0f}")
+                st.metric('Daily Energy Savings', f"{savings['daily_savings_kwh']:,.1f} kWh")
 
             # Display detailed calculations table
             st.subheader('Detailed Calculations')
@@ -394,30 +401,40 @@ def main():
                          'High Power Consumption (kWh)', 'Low Power Consumption (kWh)',
                          'Smart Total Consumption (kWh)', 'Period Savings (kWh)']
             
-            # Round all numeric columns to 2 decimal places
+            # Format numeric columns with comma separators
             numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns
-            df[numeric_columns] = df[numeric_columns].round(2)
+            for col in numeric_columns:
+                if col == 'Lights ON':
+                    df[col] = df[col].apply(lambda x: f'{int(x):,}')
+                else:
+                    df[col] = df[col].apply(lambda x: f'{x:,.2f}')
             
             # Display the detailed table with index starting from 1
             df.index = range(1, len(df) + 1)
-            st.dataframe(df)
+            st.dataframe(df, use_container_width=True)
 
             # Summary table
             st.subheader('Daily Summary')
             summary_data = {
                 'System': ['Original System', 'Smart Lighting System'],
-                'Daily Consumption (kWh)': [round(savings['original_daily_consumption'], 2), 
-                                          round(savings['smart_daily_consumption'], 2)],
-                'Annual Consumption (kWh)': [round(savings['original_daily_consumption'] * 365, 2), 
-                                           round(savings['smart_daily_consumption'] * 365, 2)],
+                'Daily Consumption (kWh)': [savings['original_daily_consumption'], 
+                                          savings['smart_daily_consumption']],
+                'Annual Consumption (kWh)': [savings['original_daily_consumption'] * 365, 
+                                           savings['smart_daily_consumption'] * 365],
                 'Annual Cost (SGD)': [
-                    round(savings['original_daily_consumption'] * 365 * st.session_state.calculator.data['electricity_rate'], 2),
-                    round(savings['smart_daily_consumption'] * 365 * st.session_state.calculator.data['electricity_rate'], 2)
+                    savings['original_daily_consumption'] * 365 * st.session_state.calculator.data['electricity_rate'],
+                    savings['smart_daily_consumption'] * 365 * st.session_state.calculator.data['electricity_rate']
                 ]
             }
             summary_df = pd.DataFrame(summary_data)
+            
+            # Format numeric columns with comma separators
+            numeric_columns = ['Daily Consumption (kWh)', 'Annual Consumption (kWh)', 'Annual Cost (SGD)']
+            for col in numeric_columns:
+                summary_df[col] = summary_df[col].apply(lambda x: f'{x:,.2f}')
+            
             summary_df.index = range(1, len(summary_df) + 1)
-            st.dataframe(summary_df)
+            st.dataframe(summary_df, use_container_width=True)
 
             # Add PDF export functionality
             if st.button('Export Results to PDF'):
