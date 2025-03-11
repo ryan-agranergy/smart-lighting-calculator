@@ -192,7 +192,7 @@ def main():
         st.write('Please provide the power information for existing lights.')
         
         with st.form(key='wattage_form'):
-            original_wattage = st.number_input('What is the power of existing lights (W)?', min_value=1, max_value=400, value=30)
+            original_wattage = st.number_input('What is the power of existing lights (W)?', min_value=1, max_value=400, value=18)
             
             col1, col2 = st.columns([1, 4])
             with col1:
@@ -224,7 +224,7 @@ def main():
         st.write('Please provide electricity rate information.')
         
         with st.form(key='rate_form'):
-            electricity_rate = st.number_input('What is the electricity rate per kWh (SGD)?', min_value=0.1, max_value=1.0, step=0.1, value=0.5)
+            electricity_rate = st.number_input('What is the electricity rate per kWh (SGD)?', min_value=0.1, max_value=1.0, step=0.1, value=0.3)
             
             col1, col2 = st.columns([1, 4])
             with col1:
@@ -251,85 +251,84 @@ def main():
 
     elif st.session_state.step == 5:
         st.write('Set up the lighting schedule.')
-        st.write('Please configure the three time periods and the number of lights for each period:')
         st.info('The total duration of all periods should add up to 24 hours. Times that cross midnight (e.g., 23:00-01:00) are handled automatically.')
         
-        col1, col2 = st.columns(2)
-        with col1:
-            def calculate_duration(start, end):
-                # Convert times to minutes for calculation
-                start_minutes = start.hour * 60 + start.minute
-                end_minutes = end.hour * 60 + end.minute
-                
-                # Handle cases where end time is on the next day
-                if end_minutes < start_minutes:
-                    end_minutes += 24 * 60
-                
-                # Return duration in hours
-                return (end_minutes - start_minutes) / 60
+        # Initialize periods in session state if not exists
+        if 'periods' not in st.session_state:
+            st.session_state.periods = 1
+        
+        def calculate_duration(start, end):
+            # Convert times to minutes for calculation
+            start_minutes = start.hour * 60 + start.minute
+            end_minutes = end.hour * 60 + end.minute
+            
+            # Handle cases where end time is on the next day
+            if end_minutes < start_minutes:
+                end_minutes += 24 * 60
+            
+            # Return duration in hours
+            return (end_minutes - start_minutes) / 60
 
-            total_lights = st.session_state.calculator.data['total_lights']
-            # Calculate default values (rounded to nearest 10)
-            default_period1 = total_lights  # 100% of lights
-            default_period2 = round(total_lights * 0.5 / 10) * 10  # 50% of lights
-            default_period3 = round(total_lights * 0.25 / 10) * 10  # 25% of lights
+        total_lights = st.session_state.calculator.data['total_lights']
+        periods_data = []
+        total_duration = 0
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            for i in range(st.session_state.periods):
+                st.subheader(f'Period {i + 1}')
+                
+                # Default values for first period - 24h by default
+                default_start = time(0, 0)
+                default_end = time(23, 59) if i == 0 else time(0, 0)
+                default_lights = total_lights if i == 0 else total_lights
+                
+                period_start = st.time_input(f'Start time for Period {i + 1}', default_start, key=f'start_{i}')
+                period_end = st.time_input(f'End time for Period {i + 1}', default_end, key=f'end_{i}')
+                duration = round(calculate_duration(period_start, period_end), 1)
+                st.caption(f'Duration: {duration} hours')
+                
+                lights = st.number_input('Number of lights ON:', 
+                                       min_value=0, 
+                                       max_value=total_lights,
+                                       value=default_lights,
+                                       key=f'lights_{i}')
+                
+                periods_data.append({
+                    'start': period_start,
+                    'end': period_end,
+                    'duration': duration,
+                    'lights': lights
+                })
+                total_duration += duration
+                st.divider()
+        
+        with col2:
+            st.write('')
+            st.write('')
+            if st.session_state.periods < 5:
+                if st.button('Add Period', key='add_period'):
+                    st.session_state.periods += 1
+                    st.rerun()
             
-            st.subheader('Period 1')
-            st.caption('e.g. Peak hours with full lighting')
-            period1_start = st.time_input('Start time for Period 1', time(8, 0))
-            period1_end = st.time_input('End time for Period 1', time(23, 0))
-            duration1 = round(calculate_duration(period1_start, period1_end), 1)
-            st.caption(f'Duration: {duration1} hours')
-            lights_period1 = st.number_input('Number of lights ON:', 
-                                           min_value=0, 
-                                           max_value=total_lights,
-                                           value=default_period1,
-                                           key='lights1')
+            if st.session_state.periods > 1:
+                if st.button('Remove Period', key='remove_period'):
+                    st.session_state.periods -= 1
+                    st.rerun()
             
-            st.subheader('Period 2')
-            st.caption('e.g. Evening hours with reduced lighting')
-            period2_start = st.time_input('Start time for Period 2', time(23, 0))
-            period2_end = st.time_input('End time for Period 2', time(1, 0))
-            duration2 = round(calculate_duration(period2_start, period2_end), 1)
-            st.caption(f'Duration: {duration2} hours')
-            lights_period2 = st.number_input('Number of lights ON:', 
-                                           min_value=0, 
-                                           max_value=total_lights,
-                                           value=default_period2,
-                                           key='lights2')
-            
-            st.subheader('Period 3')
-            st.caption('e.g. Night hours with minimum lighting')
-            period3_start = st.time_input('Start time for Period 3', time(1, 0))
-            period3_end = st.time_input('End time for Period 3', time(8, 0))
-            duration3 = round(calculate_duration(period3_start, period3_end), 1)
-            st.caption(f'Duration: {duration3} hours')
-            lights_period3 = st.number_input('Number of lights ON:', 
-                                           min_value=0, 
-                                           max_value=total_lights,
-                                           value=default_period3,
-                                           key='lights3')
-            
-            total_duration = round(duration1 + duration2 + duration3, 1)
+            st.write(f'Total Duration: {total_duration:.1f} hours')
             if abs(total_duration - 24) > 0.1:
-                st.warning(f'Total duration: {total_duration} hours. Please adjust the times to total 24 hours.')
+                st.warning('Please adjust times to total 24 hours')
 
         if st.button('Next'):
-            # Calculate durations
-            duration1 = calculate_duration(period1_start, period1_end)
-            duration2 = calculate_duration(period2_start, period2_end)
-            duration3 = calculate_duration(period3_start, period3_end)
-            
             schedule = [
-                {'duration': duration1, 'lights': lights_period1},
-                {'duration': duration2, 'lights': lights_period2},
-                {'duration': duration3, 'lights': lights_period3}
+                {'duration': period['duration'], 'lights': period['lights']}
+                for period in periods_data
             ]
             
             # Validate total hours
-            total_hours = sum(period['duration'] for period in schedule)
-            if abs(total_hours - 24) > 0.1:  # Allow small rounding differences
-                st.error(f'The total duration ({total_hours:.1f} hours) must be approximately 24 hours. Please adjust the time periods.')
+            if abs(total_duration - 24) > 0.1:  # Allow small rounding differences
+                st.error(f'The total duration ({total_duration:.1f} hours) must be approximately 24 hours. Please adjust the time periods.')
             else:
                 st.session_state.calculator.data['operation_schedule'] = schedule
                 st.session_state.step += 1
@@ -365,12 +364,18 @@ def main():
                                         help='Percentage of time operating in high power mode') / 100
             st.caption(f'Low Power Mode Time: {(100 - high_power_ratio * 100):.0f}%')
 
-        if st.button('Calculate Energy Savings'):
-            st.session_state.calculator.data['smart_light_high_wattage'] = high_power
-            st.session_state.calculator.data['smart_light_low_wattage'] = low_power
-            st.session_state.calculator.data['high_power_ratio'] = high_power_ratio
-            st.session_state.step += 1
-            st.rerun()
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            if st.button('Previous'):
+                st.session_state.step -= 1
+                st.rerun()
+        with col2:
+            if st.button('Calculate Energy Savings'):
+                st.session_state.calculator.data['smart_light_high_wattage'] = high_power
+                st.session_state.calculator.data['smart_light_low_wattage'] = low_power
+                st.session_state.calculator.data['high_power_ratio'] = high_power_ratio
+                st.session_state.step += 1
+                st.rerun()
 
     elif st.session_state.step == 7:
         # Display calculation results
