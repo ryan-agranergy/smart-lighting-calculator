@@ -78,17 +78,17 @@ class SmartLightingCalculator:
                 period_smart = 0
             smart_daily_consumption += period_smart
 
-            # Store period details
+            # Store period details with rounded values
             period_details.append({
-                'period': f"{period['duration']} hours",
+                'period': f"{round(period['duration'], 2)} hours",
                 'lights_on': lights_on,
-                'original_consumption': period_original,
-                'smart_high_hours': high_hours if lights_on > 0 else 0,  # Only count hours if lights are on
-                'smart_low_hours': low_hours if lights_on > 0 else 0,   # Only count hours if lights are on
-                'smart_high_consumption': period_high,
-                'smart_low_consumption': period_low,
-                'smart_total_consumption': period_smart,
-                'period_savings': period_original - period_smart
+                'original_consumption': round(period_original, 2),
+                'smart_high_hours': round(high_hours if lights_on > 0 else 0, 2),  # Only count hours if lights are on
+                'smart_low_hours': round(low_hours if lights_on > 0 else 0, 2),   # Only count hours if lights are on
+                'smart_high_consumption': round(period_high, 2),
+                'smart_low_consumption': round(period_low, 2),
+                'smart_total_consumption': round(period_smart, 2),
+                'period_savings': round(period_original - period_smart, 2)
             })
 
         # Calculate total savings
@@ -97,19 +97,20 @@ class SmartLightingCalculator:
         annual_savings_sgd = annual_savings_kwh * self.data['electricity_rate']
         
         return {
-            'daily_savings_kwh': daily_savings_kwh,
-            'annual_savings_kwh': annual_savings_kwh,
-            'annual_savings_sgd': annual_savings_sgd,
-            'per_light_annual_savings': annual_savings_sgd / self.data['total_lights'],
-            'six_year_savings': annual_savings_sgd * 6,
+            'daily_savings_kwh': round(daily_savings_kwh, 2),
+            'annual_savings_kwh': round(annual_savings_kwh, 2),
+            'annual_savings_sgd': round(annual_savings_sgd, 2),
+            'per_light_annual_savings': round(annual_savings_sgd / self.data['total_lights'], 2),
+            'six_year_savings': round(annual_savings_sgd * 6, 2),
             'period_details': period_details,
-            'original_daily_consumption': original_daily_consumption,
-            'smart_daily_consumption': smart_daily_consumption
+            'original_daily_consumption': round(original_daily_consumption, 2),
+            'smart_daily_consumption': round(smart_daily_consumption, 2)
         }
 
 def main():
     st.set_page_config(
-        page_title='Smart Lighting Energy Calculator',
+        page_title='Agranergy Energy Savings Calculator',
+        page_icon='https://www.agranergy.com/assets/logo-969d5430.ico',
         layout='wide',
         menu_items={
             'Get help': None,
@@ -117,7 +118,7 @@ def main():
             'About': None
         }
     )
-    st.title('Smart Lighting Energy Calculator')
+    st.title('Agranergy Energy Savings Calculator')
     
     calculator = SmartLightingCalculator()
     
@@ -208,8 +209,8 @@ def main():
             st.caption('e.g. Peak hours with full lighting')
             period1_start = st.time_input('Start time for Period 1', time(8, 0))
             period1_end = st.time_input('End time for Period 1', time(23, 0))
-            duration1 = calculate_duration(period1_start, period1_end)
-            st.caption(f'Duration: {duration1:.1f} hours')
+            duration1 = round(calculate_duration(period1_start, period1_end), 1)
+            st.caption(f'Duration: {duration1} hours')
             lights_period1 = st.number_input('Number of lights ON:', 
                                            min_value=0, 
                                            max_value=total_lights,
@@ -220,8 +221,8 @@ def main():
             st.caption('e.g. Evening hours with reduced lighting')
             period2_start = st.time_input('Start time for Period 2', time(23, 0))
             period2_end = st.time_input('End time for Period 2', time(1, 0))
-            duration2 = calculate_duration(period2_start, period2_end)
-            st.caption(f'Duration: {duration2:.1f} hours')
+            duration2 = round(calculate_duration(period2_start, period2_end), 1)
+            st.caption(f'Duration: {duration2} hours')
             lights_period2 = st.number_input('Number of lights ON:', 
                                            min_value=0, 
                                            max_value=total_lights,
@@ -232,17 +233,17 @@ def main():
             st.caption('e.g. Night hours with minimum lighting')
             period3_start = st.time_input('Start time for Period 3', time(1, 0))
             period3_end = st.time_input('End time for Period 3', time(8, 0))
-            duration3 = calculate_duration(period3_start, period3_end)
-            st.caption(f'Duration: {duration3:.1f} hours')
+            duration3 = round(calculate_duration(period3_start, period3_end), 1)
+            st.caption(f'Duration: {duration3} hours')
             lights_period3 = st.number_input('Number of lights ON:', 
                                            min_value=0, 
                                            max_value=total_lights,
                                            value=default_period3,
                                            key='lights3')
             
-            total_duration = duration1 + duration2 + duration3
+            total_duration = round(duration1 + duration2 + duration3, 1)
             if abs(total_duration - 24) > 0.1:
-                st.warning(f'Total duration: {total_duration:.1f} hours. Please adjust the times to total 24 hours.')
+                st.warning(f'Total duration: {total_duration} hours. Please adjust the times to total 24 hours.')
 
         if st.button('Next'):
             # Calculate durations
@@ -307,39 +308,51 @@ def main():
             st.success('Calculation complete! Here are the energy saving results:')
             
             col1, col2 = st.columns(2)
+            # Round all savings values to 2 decimal places
+            savings = {k: round(v, 2) if isinstance(v, (int, float)) and k != 'period_details' else v 
+                      for k, v in savings.items()}
+            
             with col1:
-                st.metric('Annual Energy Savings', f"{savings['annual_savings_kwh']:.2f} kWh")
-                st.metric('Annual Cost Savings', f"SGD {savings['annual_savings_sgd']:.2f}")
-                st.metric('Annual Savings per Light', f"SGD {savings['per_light_annual_savings']:.2f}")
+                st.metric('Annual Energy Savings', f"{savings['annual_savings_kwh']} kWh")
+                st.metric('Annual Cost Savings', f"SGD {savings['annual_savings_sgd']}")
+                st.metric('Annual Savings per Light', f"SGD {savings['per_light_annual_savings']}")
             with col2:
-                st.metric('6-Year Total Savings', f"SGD {savings['six_year_savings']:.2f}")
-                st.metric('Daily Energy Savings', f"{savings['daily_savings_kwh']:.2f} kWh")
+                st.metric('6-Year Total Savings', f"SGD {savings['six_year_savings']}")
+                st.metric('Daily Energy Savings', f"{savings['daily_savings_kwh']} kWh")
 
             # Display detailed calculations table
             st.subheader('Detailed Calculations')
             
-            # Create a DataFrame for the period details
+            # Create a DataFrame for the period details and round numeric columns
             df = pd.DataFrame(savings['period_details'])
             df.columns = ['Period', 'Lights ON', 'Original Consumption (kWh)', 
                          'High Power Hours', 'Low Power Hours',
                          'High Power Consumption (kWh)', 'Low Power Consumption (kWh)',
                          'Smart Total Consumption (kWh)', 'Period Savings (kWh)']
             
-            # Display the detailed table
+            # Round all numeric columns to 2 decimal places
+            numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns
+            df[numeric_columns] = df[numeric_columns].round(2)
+            
+            # Display the detailed table with index starting from 1
+            df.index = range(1, len(df) + 1)
             st.dataframe(df)
 
             # Summary table
             st.subheader('Daily Summary')
             summary_data = {
                 'System': ['Original System', 'Smart Lighting System'],
-                'Daily Consumption (kWh)': [savings['original_daily_consumption'], savings['smart_daily_consumption']],
-                'Annual Consumption (kWh)': [savings['original_daily_consumption'] * 365, savings['smart_daily_consumption'] * 365],
+                'Daily Consumption (kWh)': [round(savings['original_daily_consumption'], 2), 
+                                          round(savings['smart_daily_consumption'], 2)],
+                'Annual Consumption (kWh)': [round(savings['original_daily_consumption'] * 365, 2), 
+                                           round(savings['smart_daily_consumption'] * 365, 2)],
                 'Annual Cost (SGD)': [
-                    savings['original_daily_consumption'] * 365 * st.session_state.calculator.data['electricity_rate'],
-                    savings['smart_daily_consumption'] * 365 * st.session_state.calculator.data['electricity_rate']
+                    round(savings['original_daily_consumption'] * 365 * st.session_state.calculator.data['electricity_rate'], 2),
+                    round(savings['smart_daily_consumption'] * 365 * st.session_state.calculator.data['electricity_rate'], 2)
                 ]
             }
             summary_df = pd.DataFrame(summary_data)
+            summary_df.index = range(1, len(summary_df) + 1)
             st.dataframe(summary_df)
 
             # Add PDF export functionality
@@ -373,7 +386,7 @@ def main():
                 )
 
                 # Add title
-                elements.append(Paragraph(f"Energy Savings Report - {st.session_state.calculator.data['project_name']}", title_style))
+                elements.append(Paragraph(f"Agranergy Energy Savings Report - {st.session_state.calculator.data['project_name']}", title_style))
                 elements.append(Spacer(1, 20))
 
                 # Add project details
@@ -407,11 +420,11 @@ def main():
                 elements.append(Paragraph("Savings Summary", subtitle_style))
                 summary_data = [
                     ["Metric", "Value"],
-                    ["Annual Energy Savings", f"{savings['annual_savings_kwh']:.2f} kWh"],
-                    ["Annual Cost Savings", f"SGD {savings['annual_savings_sgd']:.2f}"],
-                    ["Annual Savings per Light", f"SGD {savings['per_light_annual_savings']:.2f}"],
-                    ["6-Year Total Savings", f"SGD {savings['six_year_savings']:.2f}"],
-                    ["Daily Energy Savings", f"{savings['daily_savings_kwh']:.2f} kWh"]
+                    ["Annual Energy Savings", f"{savings['annual_savings_kwh']} kWh"],
+                    ["Annual Cost Savings", f"SGD {savings['annual_savings_sgd']}"],
+                    ["Annual Savings per Light", f"SGD {savings['per_light_annual_savings']}"],
+                    ["6-Year Total Savings", f"SGD {savings['six_year_savings']}"],
+                    ["Daily Energy Savings", f"{savings['daily_savings_kwh']} kWh"]
                 ]
                 t = Table(summary_data, colWidths=[200, 200])
                 t.setStyle(TableStyle([
@@ -447,6 +460,10 @@ def main():
                     'Smart Total (kWh)',
                     'Savings (kWh)'
                 ]
+                
+                # Round numeric values in the DataFrame
+                numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns
+                df[numeric_columns] = df[numeric_columns].round(2)
                 
                 period_data = [[col for col in df.columns]] + df.values.tolist()
                 # Adjust column widths for better fit

@@ -1,8 +1,8 @@
-# 智能照明计算器 (Smart Lighting Calculator)
+# Agranergy Energy Savings Calculator
 
 ## 项目简介
 
-这是一个智能照明计算器应用，用于帮助用户计算和优化照明系统的能源消耗。
+这是一个能源节省计算器应用，用于帮助用户计算和优化照明系统的能源消耗。
 
 ## 功能特点
 
@@ -16,8 +16,8 @@
 1. 克隆项目到本地：
 
 ```bash
-git clone https://github.com/ryan-agranergy/smart-lighting-calculator.git
-cd smart-lighting-calculator
+git clone https://github.com/ryan-agranergy/agranergy-energy-savings-calculator.git
+cd agranergy-energy-savings-calculator
 ```
 
 1. 安装依赖：
@@ -65,13 +65,13 @@ http://localhost:8501/
 你可以通过以下命令检查服务状态：
 
 ```bash
-sudo systemctl status smart-lighting
+sudo systemctl status agranergy-calculator
 ```
 
 如果需要查看应用日志：
 
 ```bash
-sudo journalctl -u smart-lighting -f
+sudo journalctl -u agranergy-calculator -f
 ```
 
 ## 贡献指南
